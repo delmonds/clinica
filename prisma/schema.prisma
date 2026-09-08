@@ -1,0 +1,51 @@
+// Prisma schema do sistema de filas da clínica
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum TicketStatus {
+  WAITING // aguardando na fila
+  CALLED // chamado, aguardando comparecer ao guichê/consultório
+  IN_SERVICE // em atendimento
+  DONE // atendimento concluído
+  NO_SHOW // não compareceu quando chamado
+  CANCELLED // senha cancelada
+}
+
+model Queue {
+  id                 String   @id @default(cuid())
+  name               String
+  description        String?
+  // tempo médio de atendimento (minutos) usado como estimativa inicial,
+  // antes de haver dados históricos suficientes nesta fila
+  defaultServiceMins Int      @default(15)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  tickets Ticket[]
+}
+
+model Ticket {
+  id            String       @id @default(cuid())
+  // número sequencial da senha dentro da fila (reinicia a cada dia)
+  number         Int
+  patientName   String
+  status        TicketStatus @default(WAITING)
+
+  queueId       String
+  queue         Queue        @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime     @default(now())
+  calledAt      DateTime?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+
+  @@index([queueId, status])
+  @@index([queueId, createdAt])
+}
