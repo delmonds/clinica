@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { calledTicketMessage, sendWhatsApp } from "@/lib/whatsapp";
 
 function startOfToday(): Date {
   const d = new Date();
@@ -7,7 +8,7 @@ function startOfToday(): Date {
 }
 
 /** Emite uma nova senha para a fila informada, numerada a partir de 1 a cada dia. */
-export async function issueTicket(queueId: string, patientName: string) {
+export async function issueTicket(queueId: string, patientName: string, phone: string | null = null) {
   const ticketsToday = await prisma.ticket.count({
     where: { queueId, createdAt: { gte: startOfToday() } },
   });
@@ -16,6 +17,7 @@ export async function issueTicket(queueId: string, patientName: string) {
     data: {
       queueId,
       patientName,
+      phone,
       number: ticketsToday + 1,
     },
   });
@@ -26,13 +28,32 @@ export async function callNext(queueId: string) {
   const next = await prisma.ticket.findFirst({
     where: { queueId, status: "WAITING" },
     orderBy: { createdAt: "asc" },
+    include: { queue: true },
   });
 
   if (!next) return null;
 
-  return prisma.ticket.update({
+  const called = await prisma.ticket.update({
     where: { id: next.id },
     data: { status: "CALLED", calledAt: new Date() },
+  });
+
+  if (!next.phone) return called;
+
+  const sent = await sendWhatsApp(
+    next.phone,
+    calledTicketMessage({
+      patientName: next.patientName,
+      ticketNumber: next.number,
+      queueName: next.queue.name,
+    }),
+  );
+
+  if (!sent) return called;
+
+  return prisma.ticket.update({
+    where: { id: called.id },
+    data: { notifiedAt: new Date() },
   });
 }
 

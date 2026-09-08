@@ -12,6 +12,7 @@ type Ticket = {
   patientName: string;
   status: TicketStatus;
   createdAt: string;
+  notifiedAt: string | null;
 };
 
 type QueueWithTickets = {
@@ -145,6 +146,7 @@ function QueueCard({
   onAction: (key: string, url: string, method?: string, body?: unknown) => Promise<void>;
 }) {
   const [patientName, setPatientName] = useState("");
+  const [phone, setPhone] = useState("");
 
   const current = queue.current;
 
@@ -164,6 +166,9 @@ function QueueCard({
             <p className="text-xl font-semibold text-slate-900">
               #{current.number} — {current.patientName}
             </p>
+            {current.notifiedAt && (
+              <p className="text-xs text-emerald-600">Avisado no WhatsApp</p>
+            )}
             <div className="flex flex-wrap gap-2 pt-1">
               {current.status === "CALLED" && (
                 <>
@@ -225,27 +230,37 @@ function QueueCard({
       </div>
 
       <form
-        className="flex gap-2 pt-2 border-t border-slate-100"
+        className="space-y-2 pt-2 border-t border-slate-100"
         onSubmit={async (e) => {
           e.preventDefault();
           if (!patientName.trim()) return;
-          await onAction("issue", "/api/tickets", "POST", { queueId: queue.id, patientName });
+          await onAction("issue", "/api/tickets", "POST", { queueId: queue.id, patientName, phone });
           setPatientName("");
+          setPhone("");
         }}
       >
         <input
           value={patientName}
           onChange={(e) => setPatientName(e.target.value)}
           placeholder="Nome do paciente"
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
         />
-        <button
-          type="submit"
-          disabled={busy === "issue"}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-40"
-        >
-          Emitir senha
-        </button>
+        <div className="flex gap-2">
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="WhatsApp (opcional)"
+            inputMode="tel"
+            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={busy === "issue"}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-40"
+          >
+            Emitir senha
+          </button>
+        </div>
       </form>
     </div>
   );

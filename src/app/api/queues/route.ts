@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { PUBLIC_TICKET_FIELDS } from "@/lib/ticket-fields";
 
+// Rota pública (painel e consulta do paciente também a usam), por isso a
+// listagem só devolve os campos não sensíveis da senha.
 export async function GET() {
   const queues = await prisma.queue.findMany({
     where: { active: true },
@@ -9,6 +12,7 @@ export async function GET() {
       tickets: {
         where: { status: { in: ["WAITING", "CALLED", "IN_SERVICE"] } },
         orderBy: { createdAt: "asc" },
+        select: PUBLIC_TICKET_FIELDS,
       },
     },
   });

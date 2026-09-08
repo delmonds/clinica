@@ -44,6 +44,9 @@ model Ticket {
   // número sequencial da senha dentro da fila (reinicia a cada dia)
   number         Int
   patientName   String
+  // WhatsApp do paciente em formato E.164 sem "+" (ex: 5511998887777).
+  // Nunca é exposto nas rotas públicas de consulta.
+  phone         String?
   status        TicketStatus @default(WAITING)
 
   queueId       String
@@ -53,6 +56,8 @@ model Ticket {
   calledAt      DateTime?
   startedAt     DateTime?
   finishedAt    DateTime?
+  // quando o aviso de WhatsApp da chamada foi enviado com sucesso
+  notifiedAt    DateTime?
 
   @@index([queueId, status])
   @@index([queueId, createdAt])

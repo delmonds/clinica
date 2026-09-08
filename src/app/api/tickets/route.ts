@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { issueTicket } from "@/lib/queue-service";
+import { PUBLIC_TICKET_FIELDS } from "@/lib/ticket-fields";
+import { normalizePhone } from "@/lib/whatsapp";
 
 /** Busca a senha de hoje pelo número e fila, para o paciente consultar sem precisar do link direto. */
 export async function GET(request: Request) {
@@ -17,6 +19,7 @@ export async function GET(request: Request) {
 
   const ticket = await prisma.ticket.findFirst({
     where: { queueId, number, createdAt: { gte: startOfDay } },
+    select: PUBLIC_TICKET_FIELDS,
   });
 
   if (!ticket) {
@@ -30,9 +33,19 @@ export async function POST(request: Request) {
   const body = await request.json();
   const queueId = typeof body.queueId === "string" ? body.queueId : "";
   const patientName = typeof body.patientName === "string" ? body.patientName.trim() : "";
+  const rawPhone = typeof body.phone === "string" ? body.phone.trim() : "";
 
   if (!queueId || !patientName) {
     return NextResponse.json({ error: "Fila e nome do paciente são obrigatórios." }, { status: 400 });
+  }
+
+  // O WhatsApp é opcional, mas se vier preenchido precisa ser um número válido.
+  const phone = rawPhone ? normalizePhone(rawPhone) : null;
+  if (rawPhone && !phone) {
+    return NextResponse.json(
+      { error: "WhatsApp inválido. Use DDD + número, ex: (11) 99888-7777." },
+      { status: 400 },
+    );
   }
 
   const queue = await prisma.queue.findUnique({ where: { id: queueId } });
@@ -40,6 +53,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Fila não encontrada." }, { status: 404 });
   }
 
-  const ticket = await issueTicket(queueId, patientName);
+  const ticket = await issueTicket(queueId, patientName, phone);
   return NextResponse.json({ ticket }, { status: 201 });
 }
