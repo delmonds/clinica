@@ -31,6 +31,9 @@ Acesse `http://localhost:3000`.
   chamada em cada fila (atualiza automaticamente).
 - **`/senha`** — o paciente informa a fila e o número da senha para ver sua
   posição e o **tempo estimado de espera**.
+- **`/relatorios`** (requer login) — movimento de cada fila em um período:
+  senhas emitidas, atendimentos concluídos, faltas, cancelamentos, espera média
+  e duração média do atendimento.
 
 ## Login da recepção
 
@@ -122,8 +125,27 @@ exposto** nas rotas públicas usadas pelo painel e pela consulta do paciente.
 | `npm run db:seed`       | popula o banco com filas de exemplo e usuário de recepção |
 | `npm run staff:create`  | cria/atualiza um usuário de recepção            |
 
+## Relatório de atendimentos
+
+Em `/relatorios` a equipe escolhe um período (hoje, 7 dias, 30 dias ou datas
+específicas) e vê, por fila:
+
+| Coluna | O que mede |
+| ------- | ----------- |
+| Emitidas | senhas criadas no período |
+| Atendidas | atendimentos concluídos |
+| Faltas | pacientes que não compareceram quando chamados |
+| Canceladas | senhas canceladas pela recepção |
+| Em aberto | senhas do período ainda aguardando ou em atendimento |
+| Espera média | da emissão da senha até a chamada |
+| Duração média | do início ao fim do atendimento |
+
+As senhas são contadas pela data de emissão, no fuso do servidor. Os tempos
+médios do total são calculados sobre todas as senhas, não pela média das médias
+das filas — assim uma fila de baixo volume não distorce o número.
+
 ## Próximos passos sugeridos
 
 - Sair do sandbox da Twilio para um número WhatsApp aprovado (produção).
-- Histórico e relatórios de atendimento por fila.
+- Exportar o relatório em CSV/PDF.
 - Tela de gestão de usuários de recepção (hoje é feita via `npm run staff:create`).
