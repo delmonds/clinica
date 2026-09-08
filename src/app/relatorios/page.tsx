@@ -133,10 +133,17 @@ export default function RelatoriosPage() {
           >
             Atualizar
           </button>
-          <div className="ml-auto flex gap-2 text-sm">
+          <div className="ml-auto flex items-center gap-2 text-sm">
             <PeriodButton label="Hoje" onClick={() => setPeriod(0)} />
             <PeriodButton label="7 dias" onClick={() => setPeriod(6)} />
             <PeriodButton label="30 dias" onClick={() => setPeriod(29)} />
+            <a
+              href={`/api/reports?from=${from}&to=${to}&format=csv`}
+              download
+              className="rounded-lg border border-slate-300 px-3 py-2 text-slate-600 hover:bg-slate-100"
+            >
+              Baixar CSV
+            </a>
           </div>
         </form>
 

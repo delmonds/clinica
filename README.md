@@ -144,8 +144,15 @@ As senhas são contadas pela data de emissão, no fuso do servidor. Os tempos
 médios do total são calculados sobre todas as senhas, não pela média das médias
 das filas — assim uma fila de baixo volume não distorce o número.
 
+O botão **Baixar CSV** exporta exatamente as linhas da tela (o arquivo é gerado
+no servidor, pelos mesmos dados). O separador é `;` e o arquivo leva um BOM
+UTF-8, para abrir direto no Excel em português sem quebrar colunas nem acentos.
+O período fica no nome do arquivo
+(`relatorio-atendimentos-2026-09-01_a_2026-09-08.csv`), mantendo o conteúdo
+puramente tabular para importar em outras ferramentas.
+
 ## Próximos passos sugeridos
 
 - Sair do sandbox da Twilio para um número WhatsApp aprovado (produção).
-- Exportar o relatório em CSV/PDF.
+- Relatório por profissional, além de por fila.
 - Tela de gestão de usuários de recepção (hoje é feita via `npm run staff:create`).
