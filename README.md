@@ -15,8 +15,9 @@ consulta sua posição na fila e **quanto tempo falta para ser atendido**.
 ```bash
 npm install
 cp .env.example .env   # se ainda não existir
+# gere um AUTH_SECRET e cole no .env: openssl rand -hex 32
 npx prisma migrate dev # cria o banco SQLite local (dev.db)
-npm run db:seed        # cria filas de exemplo (Geral, Prioritário, Exames)
+npm run db:seed        # cria filas de exemplo e o usuário de recepção
 npm run dev
 ```
 
@@ -24,12 +25,30 @@ Acesse `http://localhost:3000`.
 
 ## Telas
 
-- **`/recepcao`** — emitir senhas, chamar o próximo paciente, iniciar/concluir
-  atendimento, marcar não comparecimento e cancelar senhas.
+- **`/recepcao`** (requer login) — emitir senhas, chamar o próximo paciente,
+  iniciar/concluir atendimento, marcar não comparecimento e cancelar senhas.
 - **`/painel`** — painel para exibir em uma TV na sala de espera, com a senha
   chamada em cada fila (atualiza automaticamente).
 - **`/senha`** — o paciente informa a fila e o número da senha para ver sua
   posição e o **tempo estimado de espera**.
+
+## Login da recepção
+
+O `npm run db:seed` cria um usuário padrão: `recepcao` / `trocar123` (ou os
+valores definidos em `STAFF_USERNAME`/`STAFF_PASSWORD`/`STAFF_NAME` no `.env`
+antes de rodar o seed). **Troque essa senha antes de usar em produção.**
+
+Para criar ou atualizar outros usuários de recepção:
+
+```bash
+npm run staff:create -- <usuario> <senha> "Nome do atendente"
+```
+
+A sessão é guardada em um cookie `httpOnly` assinado com `AUTH_SECRET`
+(`src/lib/auth.ts`), validado em `src/proxy.ts` — o Proxy do Next.js (antigo
+`middleware.ts`) que protege a página `/recepcao` e as rotas de API usadas
+para emitir/chamar/atualizar senhas. As rotas de consulta usadas pelo
+paciente e pelo painel público continuam sem autenticação.
 
 ## Como funciona a estimativa de tempo de espera
 
@@ -64,10 +83,11 @@ segundos.
 | `npm run lint`          | roda o ESLint                                  |
 | `npm run db:migrate`    | cria/aplica migrations do Prisma               |
 | `npm run db:studio`     | abre o Prisma Studio para inspecionar o banco  |
-| `npm run db:seed`       | popula o banco com filas de exemplo            |
+| `npm run db:seed`       | popula o banco com filas de exemplo e usuário de recepção |
+| `npm run staff:create`  | cria/atualiza um usuário de recepção            |
 
 ## Próximos passos sugeridos
 
-- Autenticação para a recepção (hoje a tela de recepção é aberta).
 - Notificação ao paciente (SMS/WhatsApp) quando a senha for chamada.
 - Histórico e relatórios de atendimento por fila.
+- Tela de gestão de usuários de recepção (hoje é feita via `npm run staff:create`).

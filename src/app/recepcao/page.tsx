@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type TicketStatus = "WAITING" | "CALLED" | "IN_SERVICE" | "DONE" | "NO_SHOW" | "CANCELLED";
 
@@ -26,9 +27,18 @@ type QueueWithTickets = {
 const POLL_MS = 4000;
 
 export default function RecepcaoPage() {
+  const router = useRouter();
   const [queues, setQueues] = useState<QueueWithTickets[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [staffName, setStaffName] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setStaffName(data.staff.name))
+      .catch(() => router.push("/login"));
+  }, [router]);
 
   const load = useCallback(async () => {
     try {
@@ -61,6 +71,10 @@ export default function RecepcaoPage() {
         headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Ocorreu um erro.");
@@ -82,9 +96,21 @@ export default function RecepcaoPage() {
             <h1 className="text-2xl font-semibold text-slate-900">Recepção</h1>
             <p className="text-sm text-slate-500">Emita senhas e chame os próximos pacientes.</p>
           </div>
-          <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">
-            ← início
-          </Link>
+          <div className="flex items-center gap-4">
+            {staffName && <span className="text-sm text-slate-500">Olá, {staffName}</span>}
+            <button
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                router.push("/login");
+              }}
+              className="text-sm text-slate-500 hover:text-slate-700"
+            >
+              Sair
+            </button>
+            <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">
+              ← início
+            </Link>
+          </div>
         </div>
 
         {error && (
