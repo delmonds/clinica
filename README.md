@@ -66,12 +66,36 @@ tempo estimado = (pacientes na frente × tempo médio de atendimento)
 A página `/senha/[id]` atualiza essa estimativa automaticamente a cada poucos
 segundos.
 
+## Aviso por WhatsApp
+
+Ao emitir uma senha, a recepção pode informar o WhatsApp do paciente (campo
+opcional). Quando essa senha é chamada, o sistema envia automaticamente uma
+mensagem avisando o paciente, e a recepção passa a ver "Avisado no WhatsApp"
+no cartão da fila.
+
+**O envio está em modo simulado**: enquanto `WHATSAPP_ENABLED` não for `true`,
+a mensagem apenas aparece no log do servidor:
+
+```
+[whatsapp:simulado] para 5511998887777: Olá, Maria! Sua senha #3 (Atendimento Geral) acabou de ser chamada...
+```
+
+Para enviar de verdade, implemente a chamada do seu provedor (Twilio, Meta
+WhatsApp Cloud API, Z-API...) na função `deliver()` de `src/lib/whatsapp.ts` e
+defina `WHATSAPP_ENABLED="true"`. Uma falha no envio nunca impede a recepção de
+chamar o paciente — o erro é registrado no log e a senha segue chamada
+normalmente.
+
+O telefone é guardado em formato E.164 (ex: `5511998887777`) e **nunca é
+exposto** nas rotas públicas usadas pelo painel e pela consulta do paciente.
+
 ## Modelo de dados
 
 - **Queue** (fila): nome, descrição, tempo médio de atendimento padrão.
-- **Ticket** (senha): número (reinicia a cada dia por fila), nome do
-  paciente, status (`WAITING`, `CALLED`, `IN_SERVICE`, `DONE`, `NO_SHOW`,
-  `CANCELLED`) e os horários de cada transição.
+- **Ticket** (senha): número (reinicia a cada dia por fila), nome e WhatsApp
+  (opcional) do paciente, status (`WAITING`, `CALLED`, `IN_SERVICE`, `DONE`,
+  `NO_SHOW`, `CANCELLED`), os horários de cada transição e quando o aviso de
+  WhatsApp foi enviado.
 
 ## Scripts
 
@@ -88,6 +112,6 @@ segundos.
 
 ## Próximos passos sugeridos
 
-- Notificação ao paciente (SMS/WhatsApp) quando a senha for chamada.
+- Conectar um provedor real de WhatsApp (hoje o envio é simulado).
 - Histórico e relatórios de atendimento por fila.
 - Tela de gestão de usuários de recepção (hoje é feita via `npm run staff:create`).

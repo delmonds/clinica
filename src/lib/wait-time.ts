@@ -44,7 +44,10 @@ export type WaitEstimate = {
  * Estima quanto falta para um ticket ser chamado, considerando quem está
  * à frente na fila (aguardando ou já em atendimento).
  */
-export async function estimateWait(ticket: Ticket, queue: Queue): Promise<WaitEstimate | null> {
+export async function estimateWait(
+  ticket: Pick<Ticket, "status" | "createdAt">,
+  queue: Queue,
+): Promise<WaitEstimate | null> {
   if (ticket.status !== "WAITING") {
     return null;
   }
