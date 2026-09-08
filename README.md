@@ -73,18 +73,30 @@ opcional). Quando essa senha é chamada, o sistema envia automaticamente uma
 mensagem avisando o paciente, e a recepção passa a ver "Avisado no WhatsApp"
 no cartão da fila.
 
-**O envio está em modo simulado**: enquanto `WHATSAPP_ENABLED` não for `true`,
-a mensagem apenas aparece no log do servidor:
+O envio é feito pela **Twilio**. Sem as credenciais configuradas o sistema roda
+em modo simulado e a mensagem apenas aparece no log do servidor:
 
 ```
 [whatsapp:simulado] para 5511998887777: Olá, Maria! Sua senha #3 (Atendimento Geral) acabou de ser chamada...
 ```
 
-Para enviar de verdade, implemente a chamada do seu provedor (Twilio, Meta
-WhatsApp Cloud API, Z-API...) na função `deliver()` de `src/lib/whatsapp.ts` e
-defina `WHATSAPP_ENABLED="true"`. Uma falha no envio nunca impede a recepção de
-chamar o paciente — o erro é registrado no log e a senha segue chamada
-normalmente.
+Para enviar de verdade, preencha as três variáveis no `.env`:
+
+```bash
+TWILIO_ACCOUNT_SID="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+TWILIO_AUTH_TOKEN="seu-auth-token"
+TWILIO_WHATSAPP_FROM="+14155238886"   # número do sandbox da Twilio
+```
+
+O `ACCOUNT_SID` e o `AUTH_TOKEN` ficam no painel da Twilio (Console → Account
+Info). Para testar sem aprovar uma conta comercial, use o **WhatsApp Sandbox**
+(Console → Messaging → Try it out → Send a WhatsApp message): cada paciente
+precisa mandar uma vez o código `join <palavra>` para o número do sandbox antes
+de conseguir receber mensagens.
+
+Uma falha no envio nunca impede a recepção de chamar o paciente — o erro é
+registrado no log e a senha segue chamada normalmente, apenas sem o selo
+"Avisado no WhatsApp".
 
 O telefone é guardado em formato E.164 (ex: `5511998887777`) e **nunca é
 exposto** nas rotas públicas usadas pelo painel e pela consulta do paciente.
@@ -112,6 +124,6 @@ exposto** nas rotas públicas usadas pelo painel e pela consulta do paciente.
 
 ## Próximos passos sugeridos
 
-- Conectar um provedor real de WhatsApp (hoje o envio é simulado).
+- Sair do sandbox da Twilio para um número WhatsApp aprovado (produção).
 - Histórico e relatórios de atendimento por fila.
 - Tela de gestão de usuários de recepção (hoje é feita via `npm run staff:create`).
