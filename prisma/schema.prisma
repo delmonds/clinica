@@ -18,6 +18,14 @@ enum TicketStatus {
   CANCELLED // senha cancelada
 }
 
+model Staff {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+}
+
 model Queue {
   id                 String   @id @default(cuid())
   name               String
