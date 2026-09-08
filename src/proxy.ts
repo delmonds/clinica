@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
-const PROTECTED_API_PATTERNS: RegExp[] = [
+/** Páginas da equipe: exigem login em qualquer método. */
+const PROTECTED_PAGES = ["/recepcao", "/relatorios"];
+
+/** Rotas de API restritas à equipe também na leitura. */
+const PROTECTED_API_PATTERNS: RegExp[] = [/^\/api\/reports$/];
+
+/** Rotas de API públicas para leitura, restritas para escrita. */
+const PROTECTED_API_WRITE_PATTERNS: RegExp[] = [
   /^\/api\/queues$/, // POST cria fila
   /^\/api\/queues\/[^/]+\/call-next$/,
   /^\/api\/tickets$/, // POST emite senha (GET de consulta continua público)
@@ -10,15 +17,17 @@ const PROTECTED_API_PATTERNS: RegExp[] = [
 ];
 
 function isProtectedApiRoute(pathname: string, method: string): boolean {
-  if (method === "GET" || method === "HEAD" || method === "OPTIONS") return false;
-  return PROTECTED_API_PATTERNS.some((pattern) => pattern.test(pathname));
+  if (PROTECTED_API_PATTERNS.some((pattern) => pattern.test(pathname))) return true;
+
+  const isRead = method === "GET" || method === "HEAD" || method === "OPTIONS";
+  return !isRead && PROTECTED_API_WRITE_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const session = verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
 
-  if (pathname.startsWith("/recepcao")) {
+  if (PROTECTED_PAGES.some((page) => pathname.startsWith(page))) {
     if (!session) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("from", pathname);
@@ -35,5 +44,13 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/recepcao/:path*", "/api/queues", "/api/queues/:path*", "/api/tickets", "/api/tickets/:path*"],
+  matcher: [
+    "/recepcao/:path*",
+    "/relatorios/:path*",
+    "/api/queues",
+    "/api/queues/:path*",
+    "/api/tickets",
+    "/api/tickets/:path*",
+    "/api/reports",
+  ],
 };

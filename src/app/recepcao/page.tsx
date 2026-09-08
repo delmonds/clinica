@@ -99,6 +99,9 @@ export default function RecepcaoPage() {
           </div>
           <div className="flex items-center gap-4">
             {staffName && <span className="text-sm text-slate-500">Olá, {staffName}</span>}
+            <Link href="/relatorios" className="text-sm text-slate-500 hover:text-slate-700">
+              relatórios
+            </Link>
             <button
               onClick={async () => {
                 await fetch("/api/auth/logout", { method: "POST" });

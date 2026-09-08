@@ -16,6 +16,11 @@ const links = [
     title: "Consultar minha senha",
     description: "O paciente acompanha a posição na fila e o tempo estimado de espera.",
   },
+  {
+    href: "/relatorios",
+    title: "Relatórios",
+    description: "Atendimentos, faltas e tempos médios de cada fila por período.",
+  },
 ];
 
 export default function Home() {
@@ -28,7 +33,7 @@ export default function Home() {
         <p className="text-slate-500">Escolha o que você quer fazer</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3 w-full max-w-4xl">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full max-w-5xl">
         {links.map((link) => (
           <Link
             key={link.href}
