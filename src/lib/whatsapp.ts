@@ -1,13 +1,15 @@
 /**
- * Envio de avisos por WhatsApp.
+ * Envio de avisos por WhatsApp via Twilio.
  *
- * Enquanto nenhum provedor estiver configurado, o sistema roda em modo
- * simulado: a mensagem é apenas registrada no log do servidor e o envio é
- * considerado bem-sucedido. Para enviar de verdade, implemente a chamada HTTP
- * do seu provedor em `deliver()` e configure WHATSAPP_ENABLED=true.
+ * Sem as credenciais da Twilio configuradas, o sistema roda em modo simulado:
+ * a mensagem é apenas registrada no log do servidor. Basta preencher
+ * TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_WHATSAPP_FROM para o envio
+ * passar a ser real.
  */
 
 const BRAZIL_COUNTRY_CODE = "55";
+const TWILIO_API_BASE = "https://api.twilio.com/2010-04-01";
+const SEND_TIMEOUT_MS = 10_000;
 
 /**
  * Normaliza um telefone digitado pela recepção para E.164 sem "+"
@@ -38,18 +40,62 @@ export function calledTicketMessage(params: {
   );
 }
 
+/** Endereço no formato que a Twilio espera: "whatsapp:+5511998887777". */
+function whatsappAddress(phone: string): string {
+  return `whatsapp:+${phone.replace(/\D/g, "")}`;
+}
+
+type TwilioConfig = { accountSid: string; authToken: string; from: string };
+
+/**
+ * Lê as credenciais da Twilio. Retorna null quando nenhuma está configurada
+ * (modo simulado) e lança quando só parte delas está preenchida — assim uma
+ * configuração pela metade aparece como erro em vez de virar silêncio.
+ */
+function readTwilioConfig(): TwilioConfig | null {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const from = process.env.TWILIO_WHATSAPP_FROM?.trim();
+
+  if (!accountSid && !authToken && !from) return null;
+
+  if (!accountSid || !authToken || !from) {
+    throw new Error(
+      "Configuração da Twilio incompleta: defina TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN e TWILIO_WHATSAPP_FROM.",
+    );
+  }
+
+  return { accountSid, authToken, from };
+}
+
 async function deliver(phone: string, message: string): Promise<void> {
-  if (process.env.WHATSAPP_ENABLED !== "true") {
+  const config = readTwilioConfig();
+
+  if (!config) {
     console.info(`[whatsapp:simulado] para ${phone}: ${message}`);
     return;
   }
 
-  // Implemente aqui a chamada ao provedor escolhido (Twilio, Meta Cloud API,
-  // Z-API...) usando as credenciais em variáveis de ambiente. Lançar um erro
-  // aqui marca o aviso como não enviado, sem interromper a chamada da senha.
-  throw new Error(
-    "WHATSAPP_ENABLED=true mas nenhum provedor foi implementado em src/lib/whatsapp.ts.",
-  );
+  const credentials = Buffer.from(`${config.accountSid}:${config.authToken}`).toString("base64");
+
+  const response = await fetch(`${TWILIO_API_BASE}/Accounts/${config.accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      To: whatsappAddress(phone),
+      From: whatsappAddress(config.from),
+      Body: message,
+    }),
+    signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`Twilio respondeu ${response.status}: ${detail.slice(0, 300)}`);
+  }
 }
 
 /**
