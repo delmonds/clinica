@@ -156,3 +156,57 @@ export function formatDay(date: Date): string {
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
 }
+
+// Ponto e vírgula porque o Excel em português trata a vírgula como separador
+// decimal — com vírgula o arquivo abriria todo em uma coluna só.
+const CSV_SEPARATOR = ";";
+
+function csvCell(value: string | number | null): string {
+  if (value === null) return "";
+
+  const text = String(value);
+  if (text.includes(CSV_SEPARATOR) || text.includes('"') || text.includes("\n")) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+const CSV_HEADER = [
+  "Fila",
+  "Emitidas",
+  "Atendidas",
+  "Faltas",
+  "Canceladas",
+  "Em aberto",
+  "Espera média (min)",
+  "Duração média (min)",
+];
+
+/** Monta o CSV com as mesmas linhas da tabela da tela, incluindo o total. */
+export function reportsToCsv(reports: QueueReport[], totals: ReportTotals): string {
+  const rows: (string | number | null)[][] = reports.map((report) => [
+    report.queueName,
+    report.issued,
+    report.attended,
+    report.noShows,
+    report.cancelled,
+    report.open,
+    report.avgWaitMinutes,
+    report.avgServiceMinutes,
+  ]);
+
+  rows.push([
+    "Total",
+    totals.issued,
+    totals.attended,
+    totals.noShows,
+    totals.cancelled,
+    totals.open,
+    totals.avgWaitMinutes,
+    totals.avgServiceMinutes,
+  ]);
+
+  return [CSV_HEADER, ...rows]
+    .map((row) => row.map(csvCell).join(CSV_SEPARATOR))
+    .join("\r\n");
+}
