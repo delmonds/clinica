@@ -31,6 +31,8 @@ Acesse `http://localhost:3000`.
   chamada em cada fila (atualiza automaticamente).
 - **`/senha`** — o paciente informa a fila e o número da senha para ver sua
   posição e o **tempo estimado de espera**.
+- **`/agenda`** (requer login) — consultas marcadas com antecedência, lembretes
+  enviados por WhatsApp e chegada do paciente (que emite a senha).
 - **`/relatorios`** (requer login) — movimento de cada fila em um período:
   senhas emitidas, atendimentos concluídos, faltas, cancelamentos, espera média
   e duração média do atendimento.
@@ -111,6 +113,11 @@ exposto** nas rotas públicas usadas pelo painel e pela consulta do paciente.
   (opcional) do paciente, status (`WAITING`, `CALLED`, `IN_SERVICE`, `DONE`,
   `NO_SHOW`, `CANCELLED`), os horários de cada transição e quando o aviso de
   WhatsApp foi enviado.
+- **Appointment** (consulta marcada): paciente, WhatsApp (obrigatório, é o
+  destino dos lembretes), fila, horário marcado, status (`SCHEDULED`,
+  `CHECKED_IN`, `CANCELLED`) e a senha emitida no check-in.
+- **AppointmentReminder**: um registro por marca da régua já consumida, com a
+  hora do envio — é o que impede repetição.
 
 ## Scripts
 
@@ -124,6 +131,46 @@ exposto** nas rotas públicas usadas pelo painel e pela consulta do paciente.
 | `npm run db:studio`     | abre o Prisma Studio para inspecionar o banco  |
 | `npm run db:seed`       | popula o banco com filas de exemplo e usuário de recepção |
 | `npm run staff:create`  | cria/atualiza um usuário de recepção            |
+
+## Agenda e lembretes de consulta
+
+Em `/relatorios` está o passado; em **`/agenda`** está o futuro: consultas
+marcadas com antecedência, cada uma com paciente, WhatsApp, fila e horário.
+Quando o paciente chega, **"Paciente chegou"** emite a senha na fila da
+consulta — daí em diante ele segue pelo fluxo normal de chamada.
+
+Enquanto a consulta está agendada, o sistema manda lembretes por WhatsApp. A
+régua padrão dispara **de 30 em 30 minutos a partir de 3h antes e, na última
+meia hora, de 5 em 5** — 180, 150, 120, 90, 60, 30, 25, 20, 15, 10 e 5 minutos
+antes, ou seja **11 mensagens por consulta**. Ajuste pelas variáveis
+`REMINDER_*` (veja `.env.example`) sem tocar em código.
+
+> Volume alto de mensagens tem custo real: o WhatsApp reduz a qualidade de
+> números que geram bloqueios e denúncias, e a Twilio cobra por mensagem.
+> Vale medir a taxa de falta antes de manter os 11 disparos.
+
+### O disparador
+
+Lembrete precisa de algo rodando sozinho — o app só age quando alguém clica.
+`POST /api/reminders/run` processa os lembretes vencidos e deve ser chamado por
+um cron **a cada 5 minutos** (o intervalo mais fino da régua):
+
+```bash
+*/5 * * * * curl -fsS -X POST https://sua-clinica.com/api/reminders/run \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+Essa rota não usa a sessão da recepção (cron não faz login): ela exige o
+`CRON_SECRET`, porque uma rota aberta deixaria qualquer um disparar mensagens
+em nome da clínica.
+
+Duas garantias no processamento:
+
+- **Nunca repete.** Cada marca da régua tem registro próprio, com chave única
+  por consulta — o cron pode rodar duas vezes sem mandar a mesma mensagem.
+- **Nunca dispara em rajada.** Se o cron ficar parado e várias marcas vencerem
+  juntas, só a mais próxima da consulta é enviada; as atrasadas são registradas
+  como consumidas. O paciente recebe um lembrete atual, não cinco antigos.
 
 ## Relatório de atendimentos
 

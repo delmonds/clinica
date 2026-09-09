@@ -26,6 +26,12 @@ model Staff {
   createdAt    DateTime @default(now())
 }
 
+enum AppointmentStatus {
+  SCHEDULED // consulta marcada, paciente ainda não chegou
+  CHECKED_IN // paciente chegou e recebeu senha
+  CANCELLED // consulta cancelada
+}
+
 model Queue {
   id                 String   @id @default(cuid())
   name               String
@@ -36,7 +42,8 @@ model Queue {
   active             Boolean  @default(true)
   createdAt          DateTime @default(now())
 
-  tickets Ticket[]
+  tickets      Ticket[]
+  appointments Appointment[]
 }
 
 model Ticket {
@@ -61,4 +68,46 @@ model Ticket {
 
   @@index([queueId, status])
   @@index([queueId, createdAt])
+
+  appointment Appointment?
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  patientName String
+  // WhatsApp é obrigatório aqui: sem ele não há lembrete a enviar.
+  phone       String
+  scheduledAt DateTime
+  status      AppointmentStatus @default(SCHEDULED)
+
+  queueId String
+  queue   Queue  @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  // senha emitida quando o paciente chega (check-in)
+  ticketId String? @unique
+  ticket   Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime  @default(now())
+  checkedInAt DateTime?
+
+  reminders AppointmentReminder[]
+
+  @@index([status, scheduledAt])
+}
+
+// Um registro por lembrete previsto. A chave única impede que o disparador,
+// ao rodar duas vezes, mande a mesma mensagem de novo.
+model AppointmentReminder {
+  id            String      @id @default(cuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  // qual marca da régua este registro consome (ex: 180, 30, 5)
+  minutesBefore Int
+  // preenchido quando a mensagem saiu; nulo quando a marca foi consumida sem
+  // envio, por já ter passado quando o disparador rodou
+  deliveredAt   DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@unique([appointmentId, minutesBefore])
 }

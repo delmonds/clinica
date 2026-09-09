@@ -3,10 +3,15 @@ import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
 /** Páginas da equipe: exigem login em qualquer método. */
-const PROTECTED_PAGES = ["/recepcao", "/relatorios"];
+const PROTECTED_PAGES = ["/recepcao", "/relatorios", "/agenda"];
 
-/** Rotas de API restritas à equipe também na leitura. */
-const PROTECTED_API_PATTERNS: RegExp[] = [/^\/api\/reports$/];
+/**
+ * Rotas de API restritas à equipe também na leitura.
+ *
+ * `/api/reminders/run` fica de fora de propósito: quem chama é o cron, que não
+ * tem sessão. Ela se protege pelo CRON_SECRET, dentro da própria rota.
+ */
+const PROTECTED_API_PATTERNS: RegExp[] = [/^\/api\/reports$/, /^\/api\/appointments(\/.*)?$/];
 
 /** Rotas de API públicas para leitura, restritas para escrita. */
 const PROTECTED_API_WRITE_PATTERNS: RegExp[] = [
@@ -47,10 +52,13 @@ export const config = {
   matcher: [
     "/recepcao/:path*",
     "/relatorios/:path*",
+    "/agenda/:path*",
     "/api/queues",
     "/api/queues/:path*",
     "/api/tickets",
     "/api/tickets/:path*",
     "/api/reports",
+    "/api/appointments",
+    "/api/appointments/:path*",
   ],
 };
