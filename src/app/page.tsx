@@ -17,6 +17,11 @@ const links = [
     description: "O paciente acompanha a posição na fila e o tempo estimado de espera.",
   },
   {
+    href: "/agenda",
+    title: "Agenda",
+    description: "Consultas marcadas, lembretes por WhatsApp e chegada do paciente.",
+  },
+  {
     href: "/relatorios",
     title: "Relatórios",
     description: "Atendimentos, faltas e tempos médios de cada fila por período.",

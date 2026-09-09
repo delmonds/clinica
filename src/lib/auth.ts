@@ -22,6 +22,14 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return timingSafeEqual(derived, storedBuffer);
 }
 
+/** Compara dois segredos sem vazar, pelo tempo de resposta, onde eles diferem. */
+export function safeEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a, "utf8");
+  const right = Buffer.from(b, "utf8");
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
+}
+
 export const SESSION_COOKIE = "clinica_session";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12; // 12 horas
 
